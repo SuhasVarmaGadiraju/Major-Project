@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sudoku Generator & Solver (Step by Step)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .sudoku {
+      display: grid;
+      grid-template-columns: repeat(9, 40px);
+      grid-gap: 2px;
+      margin: 20px auto;
+      width: fit-content;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      text-align: center;
+      font-size: 20px;
+      border: 1px solid #444;
+    }
+    .cell:focus {
+      outline: 2px solid #4CAF50;
+    }
+    .highlight {
+      background-color: lightgreen;
+    }
+    .buttons {
+      margin: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sudoku Generator & Solver (Step by Step)</h1>
+  <div class="sudoku" id="board"></div>
+  <div class="buttons">
+    <button onclick="generateSudoku()">Generate</button>
+    <button onclick="solveSudokuStepByStep()">Solve Step-by-Step</button>
+    <button onclick="clearBoard()">Clear</button>
+  </div>
+
+  <script>
+    const board = document.getElementById('board');
+    let sudoku = Array.from({ length: 9 }, () => Array(9).fill(0));
+    let solving = false;
+    let delay = 50;
+
+    function createGrid() {
+      board.innerHTML = '';
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          const input = document.createElement('input');
+          input.className = 'cell';
+          input.maxLength = 1;
+          input.dataset.row = row;
+          input.dataset.col = col;
+          input.value = sudoku[row][col] === 0 ? '' : sudoku[row][col];
+          input.disabled = solving;
+          input.oninput = () => {
+            const val = parseInt(input.value);
+            sudoku[row][col] = (val >= 1 && val <= 9) ? val : 0;
+          };
+          board.appendChild(input);
+        }
+      }
+    }
+
+    function updateGridHighlight(row, col, val) {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        const r = parseInt(cell.dataset.row);
+        const c = parseInt(cell.dataset.col);
+        if (r === row && c === col) {
+          cell.classList.add('highlight');
+          cell.value = val === 0 ? '' : val;
+        } else {
+          cell.classList.remove('highlight');
+        }
+      });
+    }
+
+    function isValid(board, row, col, num) {
+      for (let i = 0; i < 9; i++) {
+        if (board[row][i] === num || board[i][col] === num ||
+            board[3 * Math.floor(row / 3) + Math.floor(i / 3)]
+                  [3 * Math.floor(col / 3) + i % 3] === num) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    async function solveStepByStep(board) {
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          if (board[row][col] === 0) {
+            for (let num = 1; num <= 9; num++) {
+              if (isValid(board, row, col, num)) {
+                board[row][col] = num;
+                updateGridHighlight(row, col, num);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                if (await solveStepByStep(board)) return true;
+                board[row][col] = 0;
+                updateGridHighlight(row, col, 0);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
+            }
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    async function solveSudokuStepByStep() {
+      solving = true;
+      createGrid();
+      const copy = sudoku.map(row => row.slice());
+      const success = await solveStepByStep(copy);
+      if (success) {
+        sudoku = copy;
+        createGrid();
+        alert('✅ Puzzle solved!');
+      } else {
+        alert('❌ No solution found.');
+      }
+      solving = false;
+    }
+
+    function generateSudoku() {
+      sudoku = Array.from({ length: 9 }, () => Array(9).fill(0));
+      solveSudoku();
+      let clues = 30;
+      while (clues > 0) {
+        let row = Math.floor(Math.random() * 9);
+        let col = Math.floor(Math.random() * 9);
+        if (sudoku[row][col] !== 0) {
+          sudoku[row][col] = 0;
+          clues--;
+        }
+      }
+      createGrid();
+    }
+
+    function solveSudoku() {
+      const copy = sudoku.map(row => row.slice());
+      if (solve(copy)) {
+        sudoku = copy;
+      }
+    }
+
+    function solve(board) {
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          if (board[row][col] === 0) {
+            for (let num = 1; num <= 9; num++) {
+              if (isValid(board, row, col, num)) {
+                board[row][col] = num;
+                if (solve(board)) return true;
+                board[row][col] = 0;
+              }
+            }
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function clearBoard() {
+      sudoku = Array.from({ length: 9 }, () => Array(9).fill(0));
+      createGrid();
+    }
+
+    createGrid();
+  </script>
+</body>
+</html>
